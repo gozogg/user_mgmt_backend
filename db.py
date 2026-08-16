@@ -37,9 +37,24 @@ def execute(query, params=None):
     conn = get_connection()
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(query, params=None)
-        cur.commit()
+        cur.execute(query, params or ())
+        conn.commit()
         cur.close()
+    finally:
+        conn.close()
+
+def execute_returning(query, params=None):
+    """Runs an INSERT/UPDATE that has a RETURNING clause, commits, and
+    returns the returned row as a dict. Useful for getting the new row's
+    id back after an insert."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(query, params or ())
+        row = cur.fetchone()
+        conn.commit()
+        cur.close()
+        return dict(row) if row else None
     finally:
         conn.close()
 
