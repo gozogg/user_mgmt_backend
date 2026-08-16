@@ -21,6 +21,7 @@ def get_connection():
         )
 
 def fetch_all(query, params=None):
+    """SELECT"""
     conn = get_connection()
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -30,6 +31,19 @@ def fetch_all(query, params=None):
         return [dict(row) for row in rows]
     finally:
         conn.close()
+
+def execute(query, params=None):
+    """INSERT/DELETE/UPDATE"""
+    conn = get_connection()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(query, params=None)
+        cur.commit()
+        cur.close()
+    finally:
+        conn.close()
+
+
 
 def main():
     try:
