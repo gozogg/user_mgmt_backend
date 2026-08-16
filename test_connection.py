@@ -1,10 +1,35 @@
+import os
 import psycopg2
+import psycopg2.extras
+from dotenv import load_dotenv
 
-DB_HOST = "database-1.cn6ic048q6et.us-east-2.rds.amazonaws.com"
-DB_PORT = 5432
-DB_NAME = "postgres"
-DB_USER = "postgres"
-DB_PASSWORD = "2f9mVvV2dvBk7vWgg5c7" #updated password
+load_dotenv()
+
+DB_HOST = os.environ.get("DB_HOST")
+DB_PORT = os.environ.get("DB_PORT")
+DB_NAME = os.environ.get("DB_NAME")
+DB_USER = os.environ.get("DB_USER")
+DB_PASSWORD = os.environ.get("DB_PASSWORD")
+
+def get_connection():
+    return psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+        )
+
+def fetch_all(query, params=None):
+    conn = get_connection()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(query, params or ())
+        rows = cur.fetchall()
+        cur.close()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
 
 def main():
     try:
