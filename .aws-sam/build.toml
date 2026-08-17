@@ -7,6 +7,6 @@ architecture = "x86_64"
 handler = "clients.get_client.lambda_handler"
 manifest_hash = ""
 packagetype = "Zip"
-functions = ["GetClientsFunction", "CreateClientsFunction", "UpdateClientsFunction", "DeleteClientsFunction"]
+functions = ["GetClientsFunction", "CreateClientsFunction", "UpdateClientsFunction", "DeleteClientsFunction", "GetJobsFunction", "CreateJobsFunction", "UpdateJobsFunction", "DeleteJobsFunction"]
 
 [layer_build_definitions]

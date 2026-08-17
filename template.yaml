@@ -59,7 +59,6 @@ Resources:
   GetClientsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: get-clients
       CodeUri: ./
       Handler: clients.get_client.lambda_handler
       Events:
@@ -72,9 +71,8 @@ Resources:
   CreateClientsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: create-clients
       CodeUri: ./
-      Handler: handlers.add_client.lambda_handler
+      Handler: clients.add_client.lambda_handler
       Events:
         CreateClient:
           Type: Api
@@ -85,9 +83,8 @@ Resources:
   UpdateClientsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: update-clients
       CodeUri: ./
-      Handler: handlers.update_client.lambda_handler
+      Handler: clients.update_client.lambda_handler
       Events:
         UpdateClient:
           Type: Api
@@ -98,14 +95,61 @@ Resources:
   DeleteClientsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: delete-clients
       CodeUri: ./
-      Handler: handlers.delete_client.lambda_handler
+      Handler: clients.delete_client.lambda_handler
       Events:
         DeleteClients:
           Type: Api
           Properties:
-            Path: /applications/{id}
+            Path: /clients/{id}
+            Method: delete
+
+  GetJobsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: jobs.get_job.lambda_handler
+      Events:
+        GetJobs:
+          Type: Api
+          Properties:
+            Path: /jobs
+            Method: get
+
+  CreateJobsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: jobs.add_job.lambda_handler
+      Events:
+        CreateJobs:
+          Type: Api
+          Properties:
+            Path: /jobs
+            Method: post
+
+  UpdateJobsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: jobs.update_job.lambda_handler
+      Events:
+        UpdateJobs:
+          Type: Api
+          Properties:
+            Path: /jobs/{id}
+            Method: put
+
+  DeleteJobsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: jobs.delete_job.lambda_handler
+      Events:
+        DeleteJobs:
+          Type: Api
+          Properties:
+            Path: /jobs/{id}
             Method: delete
 
 # ============================================

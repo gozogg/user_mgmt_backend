@@ -6,9 +6,10 @@
 CREATE TABLE clients (
     id SERIAL PRIMARY KEY,
     address VARCHAR,
-    price_per_grass DECIMAL,
     first_name VARCHAR(50),
-    last_name VARCHAR(50)
+    last_name VARCHAR(50),
+    phone_number VARCHAR(20),
+    email VARCHAR(50)
 );
 
 CREATE TABLE jobs (
