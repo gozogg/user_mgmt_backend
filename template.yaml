@@ -116,6 +116,18 @@ Resources:
             Path: /jobs
             Method: get
 
+  GetJobDatesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: jobs.get_job_dates.lambda_handler
+      Events:
+        GetJobDates:
+          Type: Api
+          Properties:
+            Path: /job-dates
+            Method: get
+
   CreateJobsFunction:
     Type: AWS::Serverless::Function
     Properties:

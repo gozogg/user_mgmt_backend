@@ -59,6 +59,25 @@ def execute_returning(query, params=None):
         conn.close()
 
 
+def run_in_transaction(callback):
+    """Runs callback(cursor) inside a single transaction and commits.
+    Rolls back if the callback raises."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        try:
+            result = callback(cur)
+            conn.commit()
+            return result
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
+    finally:
+        conn.close()
+
+
 
 def main():
     try:
