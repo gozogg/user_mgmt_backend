@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: User Managementi  backend - Lambda functions + API Gateway
+
+# ============================================
+# Parameters: values you'll be prompted for
+# during `sam deploy --guided`, instead of
+# hardcoding secrets in this file.
+# ============================================
+Parameters:
+  DBHost:
+    Type: String
+  DBPort:
+    Type: String
+    Default: "5432"
+  DBName:
+    Type: String
+    Default: "postgres"
+  DBUser:
+    Type: String
+  DBPassword:
+    Type: String
+    NoEcho: true   # hides the value in console/CLI output
+  VpcSecurityGroupId:
+    Type: String
+    Description: Security group ID that's allowed to reach RDS on port 5432
+  SubnetId1:
+    Type: String
+    Description: First private subnet ID (same VPC as your RDS instance)
+  SubnetId2:
+    Type: String
+    Description: Second private subnet ID (RDS/Lambda VPC config needs at least 2 for availability)
+
+# ============================================
+# Globals: shared settings applied to every
+# function below, so you don't repeat yourself
+# ============================================
+Globals:
+  Function:
+    Runtime: python3.13
+    Timeout: 10
+    MemorySize: 128
+    Environment:
+      Variables:
+        DB_HOST: !Ref DBHost
+        DB_PORT: !Ref DBPort
+        DB_NAME: !Ref DBName
+        DB_USER: !Ref DBUser
+        DB_PASSWORD: !Ref DBPassword
+    VpcConfig:
+      SecurityGroupIds:
+        - !Ref VpcSecurityGroupId
+      SubnetIds:
+        - !Ref SubnetId1
+        - !Ref SubnetId2
+
+Resources:
+
+  GetClientsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: get-clients
+      CodeUri: ./
+      Handler: clients.get_client.lambda_handler
+      Events:
+        GetClients:
+          Type: Api
+          Properties:
+            Path: /clients
+            Method: get
+
+  CreateClientsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: create-clients
+      CodeUri: ./
+      Handler: handlers.add_client.lambda_handler
+      Events:
+        CreateClient:
+          Type: Api
+          Properties:
+            Path: /clients
+            Method: post
+
+  UpdateClientsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: update-clients
+      CodeUri: ./
+      Handler: handlers.update_client.lambda_handler
+      Events:
+        UpdateClient:
+          Type: Api
+          Properties:
+            Path: /clients/{id}
+            Method: put
+
+  DeleteClientsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: delete-clients
+      CodeUri: ./
+      Handler: handlers.delete_client.lambda_handler
+      Events:
+        DeleteClients:
+          Type: Api
+          Properties:
+            Path: /applications/{id}
+            Method: delete
+
+# ============================================
+# Outputs: printed after a successful deploy,
+# so you have your live API URL immediately
+# ============================================
+Outputs:
+  ApiUrl:
+    Description: Base URL for the deployed API
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"

@@ -2,14 +2,14 @@ import json
 import sys
 import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+# sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import execute_returning
 
 
 def lambda_handler(event, context):
     """
-    PUT /applications/{id}
+    PUT /clients/{id}
     Body (JSON): any subset of { company, role, status, date_applied, follow_up_date, notes, link }
     """
     client_id = event.get("pathParameters", {}).get("id")

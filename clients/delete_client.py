@@ -2,14 +2,14 @@ import json
 import sys
 import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+# sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import execute
 
 
 def lambda_handler(event, context):
     """
-    DELETE /applications/{id}
+    DELETE /clients/{id}
     """
     client_id = event.get("pathParameters", {}).get("id")
 

@@ -1,0 +1,7 @@
+venv/
+package/
+deploy/
+*.zip
+.env
+__pycache__/
+.aws-sam/

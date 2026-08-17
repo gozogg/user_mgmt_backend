@@ -1,0 +1,15 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "user-management-backend"
+resolve_s3 = true
+s3_prefix = "user-management-backend"
+region = "us-east-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+parameter_overrides = "DBHost=\"database-1.cn6ic048q6et.us-east-2.rds.amazonaws.com\" DBPort=\"5432\" DBName=\"postgres\" DBUser=\"postgres\" VpcSecurityGroupId=\"sg-07bb7db96781d5879\" SubnetId1=\"subnet-02ec01f761bc0889c\" SubnetId2=\"subnet-07f6fdae05155aba6\""
+image_repositories = []
+
+[default.global.parameters]
+region = "us-east-2"
