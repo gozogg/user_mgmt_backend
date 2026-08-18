@@ -120,18 +120,3 @@ def lambda_handler(event, context):
         "body": json.dumps(new_row, default=str),
     }
 
-
-if __name__ == "__main__":
-    fake_event = {
-        "body": json.dumps({
-            "client_id": 2,
-            "frequency": "weekly",
-            "description": "cutting grass",
-            "day_of_week": "Monday",
-            "price": 20,
-            "start_date": "2026-09-17",
-            "end_date": "2026-10-12",
-        })
-    }
-    result = lambda_handler(fake_event, None)
-    print(result)

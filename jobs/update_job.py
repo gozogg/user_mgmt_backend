@@ -3,12 +3,11 @@ import sys
 import os
 from db import execute_returning
 
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+# sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 def lambda_handler(event, context):
     """
     PUT /jobs/{id}
-    Body (JSON): any subset of { client_id, frequency, description, day_of_week }
     """
     job_id = event.get("pathParameters", {}).get("id")
     body = json.loads(event.get("body") or "{}")
@@ -19,7 +18,7 @@ def lambda_handler(event, context):
     # Build the SET clause dynamically based on which fields were sent.
     # This keeps the endpoint flexible (e.g. status-only updates) without
     # needing a separate handler for every possible field combination.
-    allowed_fields = ["client_id", "frequency", "description", "day_of_week"]
+    allowed_fields = ["client_id", "frequency", "description", "day_of_week", "price", "start_date", "end_date"]
     updates = {k: v for k, v in body.items() if k in allowed_fields}
 
     if not updates:
@@ -34,7 +33,9 @@ def lambda_handler(event, context):
     )
 
     if not updated_row:
-        return {"statusCode": 404, "body": json.dumps({"error": "client not found"})}
+        return {"statusCode": 404, "body": json.dumps({"error": "job not found"})}
+
+    
 
     return {
         "statusCode": 200,

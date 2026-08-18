@@ -26,8 +26,3 @@ def lambda_handler(event, context):
         "body": json.dumps(rows, default=str),  # default=str handles dates
     }
 
-
-if __name__ == "__main__":
-    fake_event = {"queryStringParameters": None}
-    result = lambda_handler(fake_event, None)
-    print(result)

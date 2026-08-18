@@ -10,7 +10,6 @@ from db import execute_returning
 def lambda_handler(event, context):
     """
     PUT /clients/{id}
-    Body (JSON): any subset of { company, role, status, date_applied, follow_up_date, notes, link }
     """
     client_id = event.get("pathParameters", {}).get("id")
     body = json.loads(event.get("body") or "{}")
@@ -21,7 +20,7 @@ def lambda_handler(event, context):
     # Build the SET clause dynamically based on which fields were sent.
     # This keeps the endpoint flexible (e.g. status-only updates) without
     # needing a separate handler for every possible field combination.
-    allowed_fields = ["address", "price_per_grass", "jobs", "first_name", "last_name"]
+    allowed_fields = ["address", "first_name", "last_name", "phone_number", "email"]
     updates = {k: v for k, v in body.items() if k in allowed_fields}
 
     if not updates:
@@ -43,12 +42,3 @@ def lambda_handler(event, context):
         "headers": {"Content-Type": "application/json"},
         "body": json.dumps(updated_row, default=str),
     }
-
-
-if __name__ == "__main__":
-    fake_event = {
-        "pathParameters": {"id": "2"},
-        "body": json.dumps({"last_name": "Ozog"}),
-    }
-    result = lambda_handler(fake_event, None)
-    print(result)

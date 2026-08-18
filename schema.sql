@@ -28,6 +28,8 @@ CREATE TABLE jobs (
 CREATE TABLE job_dates (
     job_id INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
     date DATE NOT NULL,
+    status VARCHAR(50) DEFAULT 'not_complete'
+        CHECK (status IN ('not_complete', 'complete')),
     PRIMARY KEY(job_id, date)
 );
 
