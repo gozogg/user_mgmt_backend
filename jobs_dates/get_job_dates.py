@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import fetch_all
+from response import json_response
 
 
 def lambda_handler(event, context):
@@ -21,12 +22,9 @@ def lambda_handler(event, context):
     client_id = query_params.get("client_id")
 
     if (start_date and not end_date) or (end_date and not start_date):
-        return {
-            "statusCode": 400,
-            "body": json.dumps({
-                "error": "start_date and end_date must be provided together",
-            }),
-        }
+        return json_response(400, {
+            "error": "start_date and end_date must be provided together",
+        })
 
     filters = []
     params = []
@@ -43,12 +41,9 @@ def lambda_handler(event, context):
         params.append(client_id)
 
     if not filters:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({
-                "error": "provide date, start_date and end_date, and/or client_id",
-            }),
-        }
+        return json_response(400, {
+            "error": "provide date, start_date and end_date, and/or client_id",
+        })
 
     query = """
         SELECT
@@ -76,11 +71,7 @@ def lambda_handler(event, context):
 
     rows = fetch_all(query, tuple(params))
 
-    return {
-        "statusCode": 200,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(rows, default=str),
-    }
+    return json_response(200, rows)
 
 
 if __name__ == "__main__":

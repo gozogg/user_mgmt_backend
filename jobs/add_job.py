@@ -6,6 +6,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import fetch_all, run_in_transaction
 from jobs.generate_dates import VALID_FREQUENCIES, generate_occurrence_dates
+from response import json_response
 
 
 def lambda_handler(event, context):
@@ -20,48 +21,30 @@ def lambda_handler(event, context):
     price = body.get("price")
 
     if not client_id:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"error": "client_id is required"}),
-        }
+        return json_response(400, {"error": "client_id is required"})
 
     if frequency not in VALID_FREQUENCIES:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({
-                "error": "frequency must be weekly, biweekly, or onetime",
-            }),
-        }
+        return json_response(400, {
+            "error": "frequency must be weekly, biweekly, or onetime",
+        })
 
     if not description:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"error": "description is required"}),
-        }
+        return json_response(400, {"error": "description is required"})
 
     if not start_date:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"error": "start_date is required"}),
-        }
+        return json_response(400, {"error": "start_date is required"})
 
     if frequency != "onetime" and not end_date:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({
-                "error": "end_date is required for weekly and biweekly jobs",
-            }),
-        }
+        return json_response(400, {
+            "error": "end_date is required for weekly and biweekly jobs",
+        })
 
     existing_client = fetch_all(
         "SELECT id FROM clients WHERE id = %s",
         (client_id,),
     )
     if not existing_client:
-        return {
-            "statusCode": 404,
-            "body": json.dumps({"error": f"client with id {client_id} not found"}),
-        }
+        return json_response(404, {"error": f"client with id {client_id} not found"})
 
     try:
         occurrence_dates = generate_occurrence_dates(
@@ -71,18 +54,12 @@ def lambda_handler(event, context):
             day_of_week=day_of_week,
         )
     except ValueError as e:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"error": str(e)}),
-        }
+        return json_response(400, {"error": str(e)})
 
     if not occurrence_dates:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({
-                "error": "no occurrences fall between start_date and end_date",
-            }),
-        }
+        return json_response(400, {
+            "error": "no occurrences fall between start_date and end_date",
+        })
 
     def create_job_and_dates(cur):
         cur.execute(
@@ -114,9 +91,5 @@ def lambda_handler(event, context):
 
     new_row = run_in_transaction(create_job_and_dates)
 
-    return {
-        "statusCode": 201,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(new_row, default=str),
-    }
+    return json_response(201, new_row)
 

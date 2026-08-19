@@ -36,6 +36,11 @@ Parameters:
 # function below, so you don't repeat yourself
 # ============================================
 Globals:
+  Api:
+    Cors:
+      AllowOrigin: "'*'"
+      AllowHeaders: "'Content-Type'"
+      AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
   Function:
     Runtime: python3.13
     Timeout: 10

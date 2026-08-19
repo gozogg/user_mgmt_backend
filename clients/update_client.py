@@ -5,6 +5,7 @@ import os
 # sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import execute_returning
+from response import json_response
 
 
 def lambda_handler(event, context):
@@ -15,7 +16,7 @@ def lambda_handler(event, context):
     body = json.loads(event.get("body") or "{}")
 
     if not client_id:
-        return {"statusCode": 400, "body": json.dumps({"error": "id is required in the URL path"})}
+        return json_response(400, {"error": "id is required in the URL path"})
 
     # Build the SET clause dynamically based on which fields were sent.
     # This keeps the endpoint flexible (e.g. status-only updates) without
@@ -24,7 +25,7 @@ def lambda_handler(event, context):
     updates = {k: v for k, v in body.items() if k in allowed_fields}
 
     if not updates:
-        return {"statusCode": 400, "body": json.dumps({"error": "no valid fields to update"})}
+        return json_response(400, {"error": "no valid fields to update"})
 
     set_clause = ", ".join(f"{field} = %s" for field in updates.keys())
     values = list(updates.values()) + [client_id]
@@ -35,10 +36,6 @@ def lambda_handler(event, context):
     )
 
     if not updated_row:
-        return {"statusCode": 404, "body": json.dumps({"error": "client not found"})}
+        return json_response(404, {"error": "client not found"})
 
-    return {
-        "statusCode": 200,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(updated_row, default=str),
-    }
+    return json_response(200, updated_row)

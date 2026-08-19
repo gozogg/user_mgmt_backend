@@ -2,6 +2,7 @@ import json
 import sys
 import os
 from db import execute_returning
+from response import json_response
 
 # sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -14,10 +15,10 @@ def lambda_handler(event, context):
     body = json.loads(event.get("body") or "{}")
 
     if not job_id:
-        return {"statusCode": 400, "body": json.dumps({"error": "id is required in the URL path"})}
+        return json_response(400, {"error": "id is required in the URL path"})
 
     if not old_date:
-        return {"statusCode": 400, "body": json.dumps({"error": "date is required in the URL query"})}
+        return json_response(400, {"error": "date is required in the URL query"})
 
     # Build the SET clause dynamically based on which fields were sent.
     # This keeps the endpoint flexible (e.g. status-only updates) without
@@ -26,7 +27,7 @@ def lambda_handler(event, context):
     updates = {k: v for k, v in body.items() if k in allowed_fields}
 
     if not updates:
-        return {"statusCode": 400, "body": json.dumps({"error": "no valid fields to update"})}
+        return json_response(400, {"error": "no valid fields to update"})
 
     set_clause = ", ".join(f"{field} = %s" for field in updates.keys())
     values = list(updates.values()) + [job_id] + [old_date]
@@ -37,15 +38,11 @@ def lambda_handler(event, context):
     )
 
     if not updated_row:
-        return {"statusCode": 404, "body": json.dumps({"error": "job not found"})}
+        return json_response(404, {"error": "job not found"})
 
     
 
-    return {
-        "statusCode": 200,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(updated_row, default=str),
-    }
+    return json_response(200, updated_row)
 
 
 if __name__ == "__main__":

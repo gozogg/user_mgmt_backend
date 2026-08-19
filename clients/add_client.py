@@ -5,6 +5,7 @@ import os
 # sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import execute_returning
+from response import json_response
 
 def lambda_handler(event, context):
     body = json.loads(event.get("body") or "{}")
@@ -16,10 +17,7 @@ def lambda_handler(event, context):
     email = body.get("email")
 
     if not first_name:
-        return {
-            "statusCode": 400,
-            "body": json.dumps({"error: ": "first name is required"})
-        }
+        return json_response(400, {"error": "first name is required"})
     
     new_row = execute_returning(
         """
@@ -36,8 +34,4 @@ def lambda_handler(event, context):
         ),
     )
 
-    return {
-        "statusCode": 201,
-        "headers": {"Content-Type": "applications/json"},
-        "body": json.dumps(new_row, default=str)
-    }
+    return json_response(201, new_row)
