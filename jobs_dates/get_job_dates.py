@@ -53,6 +53,7 @@ def lambda_handler(event, context):
     query = """
         SELECT
             jd.date,
+            jd.status,
             j.id AS job_id,
             j.frequency,
             j.description,

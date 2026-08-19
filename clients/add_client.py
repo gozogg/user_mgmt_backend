@@ -7,7 +7,7 @@ import os
 from db import execute_returning
 
 def lambda_handler(event, context):
-    body = json.loads(event.get("body" or "{}"))
+    body = json.loads(event.get("body") or "{}")
 
     address = body.get("address")
     first_name = body.get("first_name")
@@ -24,7 +24,7 @@ def lambda_handler(event, context):
     new_row = execute_returning(
         """
         INSERT INTO clients (address, first_name, last_name, phone_number, email)
-        VALUES(%s, %s, %s, %s)
+        VALUES(%s, %s, %s, %s, %s)
         RETURNING *
         """,
         (

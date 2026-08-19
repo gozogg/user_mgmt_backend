@@ -14,7 +14,7 @@ CREATE TABLE clients (
 
 CREATE TABLE jobs (
     id SERIAL PRIMARY KEY,
-    client_id INTEGER NOT NULL REFERENCES clients(id),
+    client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
     frequency VARCHAR(50) NOT NULL
         CHECK (frequency IN ('weekly', 'biweekly', 'onetime')),
     description TEXT NOT NULL,

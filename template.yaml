@@ -120,7 +120,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
-      Handler: jobs.get_job_dates.lambda_handler
+      Handler: jobs_dates.get_job_dates.lambda_handler
       Events:
         GetJobDates:
           Type: Api
@@ -163,6 +163,30 @@ Resources:
           Properties:
             Path: /jobs/{id}
             Method: delete
+
+  DeleteJobDatesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: jobs_dates.delete_job_dates.lambda_handler
+      Events:
+        GetJobDates:
+          Type: Api
+          Properties:
+            Path: /job-dates/{id}/{date}
+            Method: delete
+  
+  UpdateJobDatesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: jobs_dates.update_job_dates.lambda_handler
+      Events:
+        GetJobDates:
+          Type: Api
+          Properties:
+            Path: /job-dates/{id}/{date}
+            Method: put
 
 # ============================================
 # Outputs: printed after a successful deploy,
