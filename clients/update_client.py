@@ -21,7 +21,7 @@ def lambda_handler(event, context):
     # Build the SET clause dynamically based on which fields were sent.
     # This keeps the endpoint flexible (e.g. status-only updates) without
     # needing a separate handler for every possible field combination.
-    allowed_fields = ["address", "first_name", "last_name", "phone_number", "email"]
+    allowed_fields = ["address", "first_name", "last_name", "phone_number", "email", 'city']
     updates = {k: v for k, v in body.items() if k in allowed_fields}
 
     if not updates:

@@ -14,17 +14,18 @@ from response import json_response
 def lambda_handler(event, context):
     """
     GET /clients
+    GET /clients?city
     """
     query_params = event.get("queryStringParameters") or {}
-    # status_filter = query_params.get("status")
+    city = query_params.get("city")
 
-    # if status_filter:
-    #     rows = fetch_all(
-    #         "SELECT * FROM applications WHERE status = %s ORDER BY date_applied DESC",
-    #         (status_filter,),
-    #     )
-    # else:
-    rows = fetch_all("SELECT * FROM clients")
+    if city:
+        rows = fetch_all(
+            "SELECT * FROM clients WHERE city = %s ORDER BY last_name DESC",
+            (city,),
+        )
+    else:
+        rows = fetch_all("SELECT * FROM clients ORDER BY last_name DESC")
 
     return json_response(200, rows)
 

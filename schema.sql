@@ -9,7 +9,8 @@ CREATE TABLE clients (
     first_name VARCHAR(50),
     last_name VARCHAR(50),
     phone_number VARCHAR(20),
-    email VARCHAR(50)
+    email VARCHAR(50),
+    city VARCHAR(100),
 );
 
 CREATE TABLE jobs (

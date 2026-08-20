@@ -8,18 +8,18 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 def lambda_handler(event, context):
     """
-    GET /jobs
+    GET /jobs?client_id
     """
     query_params = event.get("queryStringParameters") or {}
-    # status_filter = query_params.get("status")
+    client_id = query_params.get("client_id")
 
-    # if status_filter:
-    #     rows = fetch_all(
-    #         "SELECT * FROM applications WHERE status = %s ORDER BY date_applied DESC",
-    #         (status_filter,),
-    #     )
-    # else:
-    rows = fetch_all("SELECT * FROM jobs")
+    if client_id:
+        rows = fetch_all(
+            "SELECT * FROM jobs WHERE client_id = %s ORDER BY start_date DESC",
+            (client_id,),
+        )
+    else:
+        rows = fetch_all("SELECT * FROM jobs ORDER BY start_date DESC")
 
     return json_response(200, rows)
 
