@@ -29,6 +29,11 @@ def lambda_handler(event, context):
     if not updates:
         return json_response(400, {"error": "no valid fields to update"})
 
+    if "status" in updates and updates["status"] not in ("not_complete", "complete", "invoiced"):
+        return json_response(400, {
+            "error": "status must be not_complete, complete, or invoiced",
+        })
+
     set_clause = ", ".join(f"{field} = %s" for field in updates.keys())
     values = list(updates.values()) + [job_id] + [old_date]
 
@@ -43,12 +48,3 @@ def lambda_handler(event, context):
     
 
     return json_response(200, updated_row)
-
-
-if __name__ == "__main__":
-    fake_event = {
-        "pathParameters": {"id": "2"},
-        "body": json.dumps({"description": "grass_cut"}),
-    }
-    result = lambda_handler(fake_event, None)
-    print(result)

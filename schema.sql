@@ -10,7 +10,7 @@ CREATE TABLE clients (
     last_name VARCHAR(50),
     phone_number VARCHAR(20),
     email VARCHAR(50),
-    city VARCHAR(100),
+    city VARCHAR(100)
 );
 
 CREATE TABLE jobs (
@@ -30,7 +30,7 @@ CREATE TABLE job_dates (
     job_id INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
     date DATE NOT NULL,
     status VARCHAR(50) DEFAULT 'not_complete'
-        CHECK (status IN ('not_complete', 'complete')),
+        CHECK (status IN ('not_complete', 'complete', 'invoiced')),
     PRIMARY KEY(job_id, date)
 );
 
