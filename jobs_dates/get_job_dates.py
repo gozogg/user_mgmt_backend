@@ -13,6 +13,7 @@ def lambda_handler(event, context):
     GET /job-dates?date=YYYY-MM-DD
     GET /job-dates?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
     GET /job-dates?client_id=2
+    GET /job-dates?job_id=3
     Filters can be combined, e.g. /job-dates?client_id=2&date=2026-08-17
     """
     query_params = event.get("queryStringParameters") or {}
@@ -20,6 +21,7 @@ def lambda_handler(event, context):
     start_date = query_params.get("start_date")
     end_date = query_params.get("end_date")
     client_id = query_params.get("client_id")
+    job_id = query_params.get("job_id")
 
     if (start_date and not end_date) or (end_date and not start_date):
         return json_response(400, {
@@ -40,9 +42,13 @@ def lambda_handler(event, context):
         filters.append("j.client_id = %s")
         params.append(client_id)
 
+    if job_id:
+        filters.append("jd.job_id = %s")
+        params.append(job_id)
+
     if not filters:
         return json_response(400, {
-            "error": "provide date, start_date and end_date, and/or client_id",
+            "error": "provide date, start_date and end_date, client_id, and/or job_id",
         })
 
     query = """

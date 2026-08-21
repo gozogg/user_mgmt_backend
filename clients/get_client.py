@@ -15,17 +15,24 @@ def lambda_handler(event, context):
     """
     GET /clients
     GET /clients?city
+    GET /clients?client_id
     """
     query_params = event.get("queryStringParameters") or {}
     city = query_params.get("city")
+    client_id = query_params.get("client_id")
 
     if city:
         rows = fetch_all(
-            "SELECT * FROM clients WHERE city = %s ORDER BY last_name DESC",
+            "SELECT * FROM clients WHERE city = %s ORDER BY last_name ASC",
             (city,),
         )
+    elif client_id:
+        rows = fetch_all(
+            "SELECT * FROM clients WHERE id = %s ORDER BY last_name ASC",
+            (client_id,),
+        )
     else:
-        rows = fetch_all("SELECT * FROM clients ORDER BY last_name DESC")
+        rows = fetch_all("SELECT * FROM clients ORDER BY last_name ASC")
 
     return json_response(200, rows)
 
