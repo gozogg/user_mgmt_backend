@@ -1,7 +1,12 @@
 import json
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import fetch_all, execute_returning
 from response import json_response
+from clients.generateLatLng import generateLatLng
 
 
 def lambda_handler(event, context):
@@ -33,10 +38,16 @@ def lambda_handler(event, context):
         if existing_clients:
             return json_response(400, {"error": "client with same first and last name exists"})
 
+        coords = generateLatLng({"address": address, "city": city}) or {}
+
+        latitude = coords.get("latitude")
+        longitude = coords.get("longitude")
+        postal_code = coords.get("postal_code")
+
         new_row = execute_returning(
             """
-            INSERT INTO clients (address, first_name, last_name, phone_number, email, city)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO clients (address, first_name, last_name, phone_number, email, city, latitude, longitude, postal_code)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
             """,
             (
@@ -46,6 +57,9 @@ def lambda_handler(event, context):
                 phone_number,
                 email,
                 city,
+                latitude,
+                longitude,
+                postal_code,
             ),
         )
 
@@ -54,3 +68,17 @@ def lambda_handler(event, context):
         # Surface the real error in the response so the browser Network tab
         # shows it instead of a generic API Gateway 500.
         return json_response(500, {"error": str(e)})
+
+if __name__ == "__main__":
+    fake_event = {
+        "body": json.dumps({
+            "address": "30214 Woodhouse Drive",
+            "first_name": "Joann",
+            "last_name": "Ozog",
+            "phone_number": "2489439688",
+            "email": "wozog@wowway.com",
+            "city": "Warren"
+        }),
+    }
+    result = lambda_handler(fake_event, None)
+    print(result)

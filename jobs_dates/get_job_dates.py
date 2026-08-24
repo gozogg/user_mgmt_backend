@@ -67,7 +67,9 @@ def lambda_handler(event, context):
             c.last_name,
             c.address,
             c.phone_number,
-            c.email
+            c.email,
+            c.latitude,
+            c.longitude
         FROM job_dates jd
         JOIN jobs j ON j.id = jd.job_id
         JOIN clients c ON c.id = j.client_id

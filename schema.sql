@@ -10,7 +10,10 @@ CREATE TABLE clients (
     last_name VARCHAR(50),
     phone_number VARCHAR(20),
     email VARCHAR(50),
-    city VARCHAR(100)
+    city VARCHAR(100),
+    latitude DECIMAL,
+    longitude DECIMAL,
+    postal_code DECIMAL
 );
 
 CREATE TABLE jobs (
