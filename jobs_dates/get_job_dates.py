@@ -55,6 +55,7 @@ def lambda_handler(event, context):
         SELECT
             jd.date,
             jd.status,
+            jd.stop_order,
             j.id AS job_id,
             j.frequency,
             j.description,
@@ -74,7 +75,7 @@ def lambda_handler(event, context):
         JOIN jobs j ON j.id = jd.job_id
         JOIN clients c ON c.id = j.client_id
         WHERE """ + " AND ".join(filters) + """
-        ORDER BY jd.date, c.last_name, c.first_name
+        ORDER BY jd.date, jd.stop_order NULLS LAST, c.last_name, c.first_name
     """
 
     rows = fetch_all(query, tuple(params))

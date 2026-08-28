@@ -197,6 +197,44 @@ Resources:
             Path: /job-dates/{id}/{date}
             Method: put
 
+  GetScheduleUnassignedFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: schedule.get_unassigned.lambda_handler
+      Events:
+        GetScheduleUnassigned:
+          Type: Api
+          Properties:
+            Path: /schedule/unassigned
+            Method: get
+
+  PreviewScheduleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: schedule.preview_schedule.lambda_handler
+      Timeout: 30
+      Events:
+        PreviewSchedule:
+          Type: Api
+          Properties:
+            Path: /schedule/preview
+            Method: post
+
+  ApplyScheduleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: schedule.apply_schedule.lambda_handler
+      Timeout: 30
+      Events:
+        ApplySchedule:
+          Type: Api
+          Properties:
+            Path: /schedule/apply
+            Method: post
+
 # ============================================
 # Outputs: printed after a successful deploy,
 # so you have your live API URL immediately

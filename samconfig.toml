@@ -7,7 +7,7 @@ s3_prefix = "user-management-backend"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 disable_rollback = false
-parameter_overrides = "DBHost=\"database-1.cn6ic048q6et.us-east-2.rds.amazonaws.com\" DBPort=\"5432\" DBName=\"postgres\" DBUser=\"postgres\" VpcSecurityGroupId=\"sg-07bb7db96781d5879\" SubnetId1=\"subnet-02ec01f761bc0889c\" SubnetId2=\"subnet-07f6fdae05155aba6\""
+parameter_overrides = "DBHost=\"database-1-post-migration.cn6ic048q6et.us-east-2.rds.amazonaws.com\" DBPort=\"5432\" DBName=\"postgres\" DBUser=\"postgres\" VpcSecurityGroupId=\"sg-07bb7db96781d5879\" SubnetId1=\"subnet-054275063b4f012c0\" SubnetId2=\"subnet-06f21e420da7dde9d\""
 image_repositories = []
 
 [default.global.parameters]

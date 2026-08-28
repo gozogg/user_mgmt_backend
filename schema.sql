@@ -34,7 +34,8 @@ CREATE TABLE job_dates (
     date DATE NOT NULL,
     status VARCHAR(50) DEFAULT 'not_complete'
         CHECK (status IN ('not_complete', 'complete', 'invoiced')),
-    PRIMARY KEY(job_id, date)
+    PRIMARY KEY(job_id, date),
+    stop_order INTEGER
 );
 
 CREATE INDEX job_dates_date_idx ON job_dates (date);
