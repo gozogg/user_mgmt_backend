@@ -235,6 +235,18 @@ Resources:
             Path: /schedule/apply
             Method: post
 
+  GetOrganizationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: organizations.get_organization.lambda_handler
+      Events:
+        GetOrganization:
+          Type: Api
+          Properties:
+            Path: /organizations/{id}
+            Method: get
+
 # ============================================
 # Outputs: printed after a successful deploy,
 # so you have your live API URL immediately

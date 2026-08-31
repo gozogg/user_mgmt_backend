@@ -4,6 +4,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import fetch_all
+from org import require_organization
 from response import json_response
 
 JOBS_SELECT = """
@@ -37,15 +38,14 @@ def _as_list(value):
 
 def lambda_handler(event, context):
     """
-    GET /jobs
-    GET /jobs?client_id=2
-    GET /jobs?job_id=3
-    GET /jobs?frequency=weekly,biweekly
-    GET /jobs?day_of_week=monday,wednesday
-    Filters can be combined (except job_id, which returns a single job).
+    GET /jobs?organization_id=1
     """
     query_params = event.get("queryStringParameters") or {}
     multi_params = event.get("multiValueQueryStringParameters") or {}
+
+    org_id, err = require_organization(event)
+    if err:
+        return err
 
     client_id = query_params.get("client_id")
     job_id = query_params.get("job_id")
@@ -58,13 +58,13 @@ def lambda_handler(event, context):
 
     if job_id:
         rows = fetch_all(
-            JOBS_SELECT + " WHERE j.id = %s",
-            (job_id,),
+            JOBS_SELECT + " WHERE j.id = %s AND j.organization_id = %s",
+            (job_id, org_id),
         )
         return json_response(200, rows)
 
-    filters = []
-    params = []
+    filters = ["j.organization_id = %s"]
+    params = [org_id]
 
     if client_id:
         filters.append("j.client_id = %s")
@@ -80,7 +80,7 @@ def lambda_handler(event, context):
         filters.append(f"j.day_of_week IN ({placeholders})")
         params.extend(days)
 
-    where = (" WHERE " + " AND ".join(filters)) if filters else ""
+    where = " WHERE " + " AND ".join(filters)
     rows = fetch_all(
         JOBS_SELECT + where + " ORDER BY j.start_date DESC",
         tuple(params),

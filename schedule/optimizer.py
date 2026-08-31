@@ -174,7 +174,7 @@ def build_schedule_preview(all_jobs, unassigned_jobs, from_date, to_date):
     }
 
 
-def apply_schedule(preview, from_date, to_date, cur):
+def apply_schedule(preview, from_date, to_date, organization_id, cur):
     assignments = preview.get("assignments") or []
     routes = preview.get("routes") or {}
 
@@ -184,15 +184,18 @@ def apply_schedule(preview, from_date, to_date, cur):
         day_of_week = item["suggested_day_of_week"]
         assigned_job_ids.add(job_id)
 
-        cur.execute("SELECT * FROM jobs WHERE id = %s", (job_id,))
+        cur.execute(
+            "SELECT * FROM jobs WHERE id = %s AND organization_id = %s",
+            (job_id, organization_id),
+        )
         job_row = cur.fetchone()
         if not job_row:
             continue
 
         job = dict(job_row)
         cur.execute(
-            "UPDATE jobs SET day_of_week = %s WHERE id = %s",
-            (day_of_week, job_id),
+            "UPDATE jobs SET day_of_week = %s WHERE id = %s AND organization_id = %s",
+            (day_of_week, job_id, organization_id),
         )
 
         occurrence_dates = generate_occurrence_dates(
@@ -202,15 +205,19 @@ def apply_schedule(preview, from_date, to_date, cur):
             day_of_week=day_of_week,
         )
         cur.execute(
-            "DELETE FROM job_dates WHERE job_id = %s AND status = 'not_complete'",
-            (job_id,),
+            """
+            DELETE FROM job_dates
+            WHERE job_id = %s AND organization_id = %s AND status = 'not_complete'
+            """,
+            (job_id, organization_id),
         )
         cur.executemany(
             """
-            INSERT INTO job_dates (job_id, date) VALUES (%s, %s)
+            INSERT INTO job_dates (job_id, organization_id, date)
+            VALUES (%s, %s, %s)
             ON CONFLICT (job_id, date) DO NOTHING
             """,
-            [(job_id, d) for d in occurrence_dates],
+            [(job_id, organization_id, d) for d in occurrence_dates],
         )
 
     updated_stops = 0
@@ -223,11 +230,12 @@ def apply_schedule(preview, from_date, to_date, cur):
                 UPDATE job_dates
                 SET stop_order = %s
                 WHERE job_id = %s
+                  AND organization_id = %s
                   AND date >= %s
                   AND date <= %s
                   AND status = 'not_complete'
                 """,
-                (stop_order, job_id, from_date, to_date),
+                (stop_order, job_id, organization_id, from_date, to_date),
             )
             updated_stops += cur.rowcount
 

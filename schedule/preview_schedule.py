@@ -6,6 +6,7 @@ from datetime import date
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import fetch_all
+from org import require_organization
 from response import json_response
 from schedule.optimizer import build_schedule_preview, parse_date
 
@@ -27,7 +28,8 @@ JOBS_SELECT = """
         c.longitude
     FROM jobs j
     JOIN clients c ON c.id = j.client_id
-    WHERE j.frequency IN ('weekly', 'biweekly')
+    WHERE j.organization_id = %s
+      AND j.frequency IN ('weekly', 'biweekly')
       AND (j.end_date IS NULL OR j.end_date >= %s)
 """
 
@@ -35,9 +37,14 @@ JOBS_SELECT = """
 def lambda_handler(event, context):
     """
     POST /schedule/preview
-    Body: { "from_date": "YYYY-MM-DD", "to_date": "YYYY-MM-DD" }
+    Body: { "organization_id": 1, "from_date": "YYYY-MM-DD", "to_date": "YYYY-MM-DD" }
     """
     body = json.loads(event.get("body") or "{}")
+
+    org_id, err = require_organization(event, body)
+    if err:
+        return err
+
     today = date.today()
 
     try:
@@ -49,7 +56,7 @@ def lambda_handler(event, context):
     if to_date < from_date:
         return json_response(400, {"error": "to_date must be on or after from_date"})
 
-    all_jobs = fetch_all(JOBS_SELECT, (today,))
+    all_jobs = fetch_all(JOBS_SELECT, (org_id, today))
     unassigned_jobs = [j for j in all_jobs if not j.get("day_of_week")]
 
     preview = build_schedule_preview(all_jobs, unassigned_jobs, from_date, to_date)

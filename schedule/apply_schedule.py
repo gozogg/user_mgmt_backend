@@ -6,6 +6,7 @@ from datetime import date
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import run_in_transaction
+from org import require_organization
 from response import json_response
 from schedule.optimizer import apply_schedule, parse_date
 
@@ -16,11 +17,16 @@ def lambda_handler(event, context):
     Body: preview payload from /schedule/preview plus from_date/to_date.
     """
     body = json.loads(event.get("body") or "{}")
-    today = date.today()
+
+    org_id, err = require_organization(event, body)
+    if err:
+        return err
 
     preview = body.get("preview")
     if not preview:
         return json_response(400, {"error": "preview is required"})
+
+    today = date.today()
 
     try:
         from_date = parse_date(body.get("from_date") or preview.get("from_date") or today)
@@ -33,5 +39,7 @@ def lambda_handler(event, context):
     if to_date < from_date:
         return json_response(400, {"error": "to_date must be on or after from_date"})
 
-    result = run_in_transaction(lambda cur: apply_schedule(preview, from_date, to_date, cur))
+    result = run_in_transaction(
+        lambda cur: apply_schedule(preview, from_date, to_date, org_id, cur)
+    )
     return json_response(200, result)

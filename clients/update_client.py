@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import execute_returning, fetch_all
+from org import require_organization
 from response import json_response
 from clients.generateLatLng import generateLatLng
 
@@ -20,6 +21,10 @@ def lambda_handler(event, context):
         if not client_id:
             return json_response(400, {"error": "id is required in the URL path"})
 
+        org_id, err = require_organization(event, body)
+        if err:
+            return err
+
         allowed_fields = [
             "address",
             "first_name",
@@ -33,11 +38,10 @@ def lambda_handler(event, context):
         if not updates:
             return json_response(400, {"error": "no valid fields to update"})
 
-        # Re-geocode when address or city changes.
         if "address" in updates or "city" in updates:
             existing_rows = fetch_all(
-                "SELECT address, city FROM clients WHERE id = %s",
-                (client_id,),
+                "SELECT address, city FROM clients WHERE id = %s AND organization_id = %s",
+                (client_id, org_id),
             )
             if not existing_rows:
                 return json_response(404, {"error": "client not found"})
@@ -52,10 +56,10 @@ def lambda_handler(event, context):
             updates["postal_code"] = coords.get("postal_code")
 
         set_clause = ", ".join(f"{field} = %s" for field in updates.keys())
-        values = list(updates.values()) + [client_id]
+        values = list(updates.values()) + [client_id, org_id]
 
         updated_row = execute_returning(
-            f"UPDATE clients SET {set_clause} WHERE id = %s RETURNING *",
+            f"UPDATE clients SET {set_clause} WHERE id = %s AND organization_id = %s RETURNING *",
             values,
         )
 

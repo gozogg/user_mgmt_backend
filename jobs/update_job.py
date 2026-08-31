@@ -6,6 +6,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import execute_returning, run_in_transaction, fetch_all
 from jobs.generate_dates import VALID_FREQUENCIES, generate_occurrence_dates
+from org import require_organization
 from response import json_response
 
 SCHEDULE_FIELDS = {"frequency", "day_of_week", "start_date", "end_date"}
@@ -21,13 +22,20 @@ def lambda_handler(event, context):
     if not job_id:
         return json_response(400, {"error": "id is required in the URL path"})
 
+    org_id, err = require_organization(event, body)
+    if err:
+        return err
+
     allowed_fields = ["client_id", "frequency", "description", "day_of_week", "price", "start_date", "end_date"]
     updates = {k: v for k, v in body.items() if k in allowed_fields}
 
     if not updates:
         return json_response(400, {"error": "no valid fields to update"})
 
-    existing_rows = fetch_all("SELECT * FROM jobs WHERE id = %s", (job_id,))
+    existing_rows = fetch_all(
+        "SELECT * FROM jobs WHERE id = %s AND organization_id = %s",
+        (job_id, org_id),
+    )
     if not existing_rows:
         return json_response(404, {"error": "job not found"})
 
@@ -45,8 +53,8 @@ def lambda_handler(event, context):
 
     if "client_id" in updates:
         existing_client = fetch_all(
-            "SELECT id FROM clients WHERE id = %s",
-            (updates["client_id"],),
+            "SELECT id FROM clients WHERE id = %s AND organization_id = %s",
+            (updates["client_id"], org_id),
         )
         if not existing_client:
             return json_response(404, {"error": "client not found"})
@@ -69,9 +77,9 @@ def lambda_handler(event, context):
 
         def update_job_and_dates(cur):
             set_clause = ", ".join(f"{field} = %s" for field in updates.keys())
-            values = list(updates.values()) + [job_id]
+            values = list(updates.values()) + [job_id, org_id]
             cur.execute(
-                f"UPDATE jobs SET {set_clause} WHERE id = %s RETURNING *",
+                f"UPDATE jobs SET {set_clause} WHERE id = %s AND organization_id = %s RETURNING *",
                 values,
             )
             job_row = cur.fetchone()
@@ -80,15 +88,19 @@ def lambda_handler(event, context):
 
             job = dict(job_row)
             cur.execute(
-                "DELETE FROM job_dates WHERE job_id = %s AND status = 'not_complete'",
-                (job_id,),
+                """
+                DELETE FROM job_dates
+                WHERE job_id = %s AND organization_id = %s AND status = 'not_complete'
+                """,
+                (job_id, org_id),
             )
             cur.executemany(
                 """
-                INSERT INTO job_dates (job_id, date) VALUES (%s, %s)
+                INSERT INTO job_dates (job_id, organization_id, date)
+                VALUES (%s, %s, %s)
                 ON CONFLICT (job_id, date) DO NOTHING
                 """,
-                [(job["id"], d) for d in occurrence_dates],
+                [(job["id"], org_id, d) for d in occurrence_dates],
             )
             cur.execute(
                 "SELECT date FROM job_dates WHERE job_id = %s ORDER BY date",
@@ -104,10 +116,10 @@ def lambda_handler(event, context):
         return json_response(200, updated_row)
 
     set_clause = ", ".join(f"{field} = %s" for field in updates.keys())
-    values = list(updates.values()) + [job_id]
+    values = list(updates.values()) + [job_id, org_id]
 
     updated_row = execute_returning(
-        f"UPDATE jobs SET {set_clause} WHERE id = %s RETURNING *",
+        f"UPDATE jobs SET {set_clause} WHERE id = %s AND organization_id = %s RETURNING *",
         values,
     )
 
@@ -115,12 +127,3 @@ def lambda_handler(event, context):
         return json_response(404, {"error": "job not found"})
 
     return json_response(200, updated_row)
-
-
-if __name__ == "__main__":
-    fake_event = {
-        "pathParameters": {"id": "2"},
-        "body": json.dumps({"description": "grass_cut"}),
-    }
-    result = lambda_handler(fake_event, None)
-    print(result)

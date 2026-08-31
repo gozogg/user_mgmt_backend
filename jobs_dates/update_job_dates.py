@@ -1,14 +1,17 @@
 import json
 import sys
 import os
-from db import execute_returning
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
+from db import execute_returning, fetch_all
+from org import require_organization
 from response import json_response
 
-# sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 def lambda_handler(event, context):
     """
-    PUT /jobs-dates/{id}/{date}
+    PUT /job-dates/{id}/{date}
     """
     job_id = event.get("pathParameters", {}).get("id")
     old_date = event.get("pathParameters", {}).get("date")
@@ -20,9 +23,17 @@ def lambda_handler(event, context):
     if not old_date:
         return json_response(400, {"error": "date is required in the URL query"})
 
-    # Build the SET clause dynamically based on which fields were sent.
-    # This keeps the endpoint flexible (e.g. status-only updates) without
-    # needing a separate handler for every possible field combination.
+    org_id, err = require_organization(event, body)
+    if err:
+        return err
+
+    job_rows = fetch_all(
+        "SELECT id FROM jobs WHERE id = %s AND organization_id = %s",
+        (job_id, org_id),
+    )
+    if not job_rows:
+        return json_response(404, {"error": "job not found"})
+
     allowed_fields = ["date", "status"]
     updates = {k: v for k, v in body.items() if k in allowed_fields}
 
@@ -35,16 +46,18 @@ def lambda_handler(event, context):
         })
 
     set_clause = ", ".join(f"{field} = %s" for field in updates.keys())
-    values = list(updates.values()) + [job_id] + [old_date]
+    values = list(updates.values()) + [job_id, old_date, org_id]
 
     updated_row = execute_returning(
-        f"UPDATE job_dates SET {set_clause} WHERE job_id = %s AND date = %s RETURNING *",
+        f"""
+        UPDATE job_dates SET {set_clause}
+        WHERE job_id = %s AND date = %s AND organization_id = %s
+        RETURNING *
+        """,
         values,
     )
 
     if not updated_row:
         return json_response(404, {"error": "job not found"})
-
-    
 
     return json_response(200, updated_row)

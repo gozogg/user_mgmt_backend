@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import fetch_all, execute_returning
+from org import require_organization
 from response import json_response
 from clients.generateLatLng import generateLatLng
 
@@ -20,6 +21,10 @@ def lambda_handler(event, context):
         else:
             body = json.loads(raw_body)
 
+        org_id, err = require_organization(event, body)
+        if err:
+            return err
+
         address = body.get("address")
         city = body.get("city")
         first_name = body.get("first_name")
@@ -31,8 +36,11 @@ def lambda_handler(event, context):
             return json_response(400, {"error": "first name is required"})
 
         existing_clients = fetch_all(
-            "SELECT id FROM clients WHERE first_name = %s AND last_name = %s",
-            (first_name, last_name),
+            """
+            SELECT id FROM clients
+            WHERE organization_id = %s AND first_name = %s AND last_name = %s
+            """,
+            (org_id, first_name, last_name),
         )
 
         if existing_clients:
@@ -46,11 +54,15 @@ def lambda_handler(event, context):
 
         new_row = execute_returning(
             """
-            INSERT INTO clients (address, first_name, last_name, phone_number, email, city, latitude, longitude, postal_code)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO clients (
+                organization_id, address, first_name, last_name,
+                phone_number, email, city, latitude, longitude, postal_code
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
             """,
             (
+                org_id,
                 address,
                 first_name,
                 last_name,
@@ -65,20 +77,4 @@ def lambda_handler(event, context):
 
         return json_response(201, new_row)
     except Exception as e:
-        # Surface the real error in the response so the browser Network tab
-        # shows it instead of a generic API Gateway 500.
         return json_response(500, {"error": str(e)})
-
-if __name__ == "__main__":
-    fake_event = {
-        "body": json.dumps({
-            "address": "30214 Woodhouse Drive",
-            "first_name": "Joann",
-            "last_name": "Ozog",
-            "phone_number": "2489439688",
-            "email": "wozog@wowway.com",
-            "city": "Warren"
-        }),
-    }
-    result = lambda_handler(fake_event, None)
-    print(result)

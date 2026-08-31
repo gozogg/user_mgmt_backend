@@ -1,22 +1,22 @@
-import json
 import sys
 import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import fetch_all
+from org import require_organization
 from response import json_response
 
 
 def lambda_handler(event, context):
     """
-    GET /job-dates?date=YYYY-MM-DD
-    GET /job-dates?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
-    GET /job-dates?client_id=2
-    GET /job-dates?job_id=3
-    Filters can be combined, e.g. /job-dates?client_id=2&date=2026-08-17
+    GET /job-dates?organization_id=1
     """
     query_params = event.get("queryStringParameters") or {}
+    org_id, err = require_organization(event)
+    if err:
+        return err
+
     date = query_params.get("date")
     start_date = query_params.get("start_date")
     end_date = query_params.get("end_date")
@@ -28,8 +28,8 @@ def lambda_handler(event, context):
             "error": "start_date and end_date must be provided together",
         })
 
-    filters = []
-    params = []
+    filters = ["jd.organization_id = %s"]
+    params = [org_id]
 
     if date:
         filters.append("jd.date = %s")
@@ -46,7 +46,7 @@ def lambda_handler(event, context):
         filters.append("jd.job_id = %s")
         params.append(job_id)
 
-    if not filters:
+    if len(filters) == 1:
         return json_response(400, {
             "error": "provide date, start_date and end_date, client_id, and/or job_id",
         })
@@ -81,9 +81,3 @@ def lambda_handler(event, context):
     rows = fetch_all(query, tuple(params))
 
     return json_response(200, rows)
-
-
-if __name__ == "__main__":
-    fake_event = {"queryStringParameters": {"client_id": "2"}}
-    result = lambda_handler(fake_event, None)
-    print(result)

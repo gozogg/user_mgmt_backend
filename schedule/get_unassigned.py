@@ -5,14 +5,18 @@ from datetime import date
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import fetch_all
+from org import require_organization
 from response import json_response
 
 
 def lambda_handler(event, context):
     """
-    GET /schedule/unassigned
-    Returns recurring jobs with no day_of_week assigned yet.
+    GET /schedule/unassigned?organization_id=1
     """
+    org_id, err = require_organization(event)
+    if err:
+        return err
+
     today = date.today()
 
     rows = fetch_all(
@@ -33,12 +37,13 @@ def lambda_handler(event, context):
             c.longitude
         FROM jobs j
         JOIN clients c ON c.id = j.client_id
-        WHERE j.frequency IN ('weekly', 'biweekly')
+        WHERE j.organization_id = %s
+          AND j.frequency IN ('weekly', 'biweekly')
           AND j.day_of_week IS NULL
           AND (j.end_date IS NULL OR j.end_date >= %s)
         ORDER BY c.last_name, c.first_name
         """,
-        (today,),
+        (org_id, today),
     )
 
     return json_response(200, rows)

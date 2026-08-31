@@ -1,10 +1,17 @@
 
 -- schema.sql
 -- Single source of truth for all database tables in this project.
- 
+
+CREATE TABLE organizations (
+    id SERIAL PRIMARY KEY,
+    business_name VARCHAR(50) NOT NULL,
+    default_start_date DATE,
+    default_end_date DATE
+);
 
 CREATE TABLE clients (
     id SERIAL PRIMARY KEY,
+    organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     address VARCHAR,
     first_name VARCHAR(50),
     last_name VARCHAR(50),
@@ -19,6 +26,7 @@ CREATE TABLE clients (
 CREATE TABLE jobs (
     id SERIAL PRIMARY KEY,
     client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     frequency VARCHAR(50) NOT NULL
         CHECK (frequency IN ('weekly', 'biweekly', 'onetime')),
     description TEXT NOT NULL,
@@ -28,9 +36,9 @@ CREATE TABLE jobs (
     end_date DATE
 );
 
-
 CREATE TABLE job_dates (
     job_id INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     date DATE NOT NULL,
     status VARCHAR(50) DEFAULT 'not_complete'
         CHECK (status IN ('not_complete', 'complete', 'invoiced')),
@@ -38,4 +46,7 @@ CREATE TABLE job_dates (
     stop_order INTEGER
 );
 
+CREATE INDEX clients_organization_id_idx ON clients (organization_id);
+CREATE INDEX jobs_organization_id_idx ON jobs (organization_id);
+CREATE INDEX job_dates_organization_id_idx ON job_dates (organization_id);
 CREATE INDEX job_dates_date_idx ON job_dates (date);

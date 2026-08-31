@@ -6,11 +6,16 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import fetch_all, run_in_transaction
 from jobs.generate_dates import VALID_FREQUENCIES, generate_occurrence_dates
+from org import require_organization
 from response import json_response
 
 
 def lambda_handler(event, context):
     body = json.loads(event.get("body") or "{}")
+
+    org_id, err = require_organization(event, body)
+    if err:
+        return err
 
     client_id = body.get("client_id")
     frequency = body.get("frequency")
@@ -40,8 +45,8 @@ def lambda_handler(event, context):
         })
 
     existing_client = fetch_all(
-        "SELECT id FROM clients WHERE id = %s",
-        (client_id,),
+        "SELECT id FROM clients WHERE id = %s AND organization_id = %s",
+        (client_id, org_id),
     )
     if not existing_client:
         return json_response(404, {"error": f"client with id {client_id} not found"})
@@ -65,14 +70,15 @@ def lambda_handler(event, context):
         cur.execute(
             """
             INSERT INTO jobs (
-                client_id, frequency, description, day_of_week,
+                client_id, organization_id, frequency, description, day_of_week,
                 price, start_date, end_date
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
             """,
             (
                 client_id,
+                org_id,
                 frequency,
                 description,
                 day_of_week,
@@ -83,8 +89,11 @@ def lambda_handler(event, context):
         )
         job = dict(cur.fetchone())
         cur.executemany(
-            "INSERT INTO job_dates (job_id, date) VALUES (%s, %s)",
-            [(job["id"], d) for d in occurrence_dates],
+            """
+            INSERT INTO job_dates (job_id, organization_id, date)
+            VALUES (%s, %s, %s)
+            """,
+            [(job["id"], org_id, d) for d in occurrence_dates],
         )
         job["dates"] = [str(d) for d in occurrence_dates]
         return job
@@ -92,4 +101,3 @@ def lambda_handler(event, context):
     new_row = run_in_transaction(create_job_and_dates)
 
     return json_response(201, new_row)
-
