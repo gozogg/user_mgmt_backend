@@ -247,6 +247,30 @@ Resources:
             Path: /organizations/{id}
             Method: get
 
+  CreateOrganizationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: organizations.add_organization.lambda_handler
+      Events:
+        CreateOrganization:
+          Type: Api
+          Properties:
+            Path: /organizations
+            Method: post
+
+  UpdateOrganizationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: organizations.update_organization.lambda_handler
+      Events:
+        UpdateOrganization:
+          Type: Api
+          Properties:
+            Path: /organizations/{id}
+            Method: put
+
 # ============================================
 # Outputs: printed after a successful deploy,
 # so you have your live API URL immediately
