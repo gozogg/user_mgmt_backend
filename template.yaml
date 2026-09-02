@@ -173,6 +173,24 @@ Resources:
             Path: /jobs/{id}
             Method: delete
 
+  SyncJobsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: jobs.sync_jobs.lambda_handler
+      Timeout: 30
+      Events:
+        SyncJobs:
+          Type: Api
+          Properties:
+            Path: /jobs/sync
+            Method: post
+        DailySync:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 9 * * ? *)
+            Enabled: true
+
   DeleteJobDatesFunction:
     Type: AWS::Serverless::Function
     Properties:

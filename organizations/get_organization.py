@@ -18,7 +18,7 @@ def lambda_handler(event, context):
 
     rows = fetch_all(
         """
-        SELECT id, business_name, default_start_date, default_end_date
+        SELECT id, business_name, default_start_date, default_end_date, alert_days, alert_email
         FROM organizations
         WHERE id = %s
         """,

@@ -4,12 +4,36 @@ import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from db import execute_returning, run_in_transaction, fetch_all
+from db import fetch_all, run_in_transaction
 from jobs.generate_dates import VALID_FREQUENCIES, generate_occurrence_dates
 from org import require_organization
 from response import json_response
 
 SCHEDULE_FIELDS = {"frequency", "day_of_week", "start_date", "end_date"}
+VALID_JOB_STATUSES = {"active", "completed", "future", "cancelled", "past_due"}
+
+
+def _update_job_row(cur, updates, job_id, org_id):
+    set_clause = ", ".join(f"{field} = %s" for field in updates.keys())
+    values = list(updates.values()) + [job_id, org_id]
+    cur.execute(
+        f"UPDATE jobs SET {set_clause} WHERE id = %s AND organization_id = %s RETURNING *",
+        values,
+    )
+    row = cur.fetchone()
+    return dict(row) if row else None
+
+
+def _delete_incomplete_dates(cur, job_id, org_id):
+    cur.execute(
+        """
+        DELETE FROM job_dates
+        WHERE job_id = %s
+          AND organization_id = %s
+          AND status = 'not_complete'
+        """,
+        (job_id, org_id),
+    )
 
 
 def lambda_handler(event, context):
@@ -31,6 +55,11 @@ def lambda_handler(event, context):
 
     if not updates:
         return json_response(400, {"error": "no valid fields to update"})
+
+    if "status" in updates and updates["status"] not in VALID_JOB_STATUSES:
+        return json_response(400, {
+            "error": "status must be active, completed, future, cancelled, or past_due",
+        })
 
     existing_rows = fetch_all(
         "SELECT * FROM jobs WHERE id = %s AND organization_id = %s",
@@ -59,7 +88,10 @@ def lambda_handler(event, context):
         if not existing_client:
             return json_response(404, {"error": "client not found"})
 
-    if SCHEDULE_FIELDS & updates.keys():
+    cancelling = merged.get("status") == "cancelled"
+    regenerate_schedule = bool(SCHEDULE_FIELDS & updates.keys()) and not cancelling
+
+    if regenerate_schedule:
         try:
             occurrence_dates = generate_occurrence_dates(
                 merged["frequency"],
@@ -76,17 +108,10 @@ def lambda_handler(event, context):
             })
 
         def update_job_and_dates(cur):
-            set_clause = ", ".join(f"{field} = %s" for field in updates.keys())
-            values = list(updates.values()) + [job_id, org_id]
-            cur.execute(
-                f"UPDATE jobs SET {set_clause} WHERE id = %s AND organization_id = %s RETURNING *",
-                values,
-            )
-            job_row = cur.fetchone()
-            if not job_row:
+            job = _update_job_row(cur, updates, job_id, org_id)
+            if not job:
                 return None
 
-            job = dict(job_row)
             cur.execute(
                 """
                 DELETE FROM job_dates
@@ -115,13 +140,15 @@ def lambda_handler(event, context):
 
         return json_response(200, updated_row)
 
-    set_clause = ", ".join(f"{field} = %s" for field in updates.keys())
-    values = list(updates.values()) + [job_id, org_id]
+    def update_job(cur):
+        job = _update_job_row(cur, updates, job_id, org_id)
+        if not job:
+            return None
+        if cancelling:
+            _delete_incomplete_dates(cur, job_id, org_id)
+        return job
 
-    updated_row = execute_returning(
-        f"UPDATE jobs SET {set_clause} WHERE id = %s AND organization_id = %s RETURNING *",
-        values,
-    )
+    updated_row = run_in_transaction(update_job)
 
     if not updated_row:
         return json_response(404, {"error": "job not found"})

@@ -32,7 +32,7 @@ CREATE TABLE jobs (
     frequency VARCHAR(50) NOT NULL
         CHECK (frequency IN ('weekly', 'biweekly', 'onetime')),
     status VARCHAR(50) DEFAULT 'active'
-        CHECK (status IN ('active', 'completed', 'future', 'cancelled')),
+        CHECK (status IN ('active', 'completed', 'future', 'cancelled', 'past_due')),
     description TEXT NOT NULL,
     day_of_week VARCHAR(50),
     price DECIMAL,
