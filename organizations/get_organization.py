@@ -4,17 +4,28 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import fetch_all
+from org import require_organization
 from response import json_response
 
 
 def lambda_handler(event, context):
     """
     GET /organizations/{id}
-    """
-    org_id = event.get("pathParameters", {}).get("id")
+    GET /organizations/me
 
-    if not org_id:
-        return json_response(400, {"error": "id is required in the URL path"})
+    Organization is taken from the JWT. Path id must be "me" or the caller's org.
+    """
+    org_id, err = require_organization(event)
+    if err:
+        return err
+
+    path_id = (event.get("pathParameters") or {}).get("id")
+    if path_id and path_id != "me":
+        try:
+            if int(path_id) != org_id:
+                return json_response(403, {"error": "forbidden"})
+        except (TypeError, ValueError):
+            return json_response(400, {"error": "id must be an integer or 'me'"})
 
     rows = fetch_all(
         """

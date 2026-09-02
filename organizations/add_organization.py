@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import execute_returning
+from org import require_client_role
 from response import json_response
 
 
@@ -13,6 +14,10 @@ def lambda_handler(event, context):
     POST /organizations
     Body: { "business_name", "default_start_date", "default_end_date" }
     """
+    forbidden = require_client_role(event)
+    if forbidden:
+        return forbidden
+
     body = json.loads(event.get("body") or "{}")
 
     business_name = body.get("business_name")

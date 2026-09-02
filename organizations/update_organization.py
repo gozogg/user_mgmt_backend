@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from db import execute_returning, fetch_all
+from org import require_organization
 from response import json_response
 
 
@@ -13,11 +14,21 @@ def lambda_handler(event, context):
     PUT /organizations/{id}
     Body: { "business_name", "default_start_date", "default_end_date", "alert_days", "alert_email" }
     """
-    org_id = event.get("pathParameters", {}).get("id")
+    org_id, err = require_organization(event)
+    if err:
+        return err
+
+    path_id = (event.get("pathParameters") or {}).get("id")
     body = json.loads(event.get("body") or "{}")
 
-    if not org_id:
+    if not path_id:
         return json_response(400, {"error": "id is required in the URL path"})
+
+    try:
+        if int(path_id) != org_id:
+            return json_response(403, {"error": "forbidden"})
+    except (TypeError, ValueError):
+        return json_response(400, {"error": "id must be an integer"})
 
     allowed_fields = ["business_name", "default_start_date", "default_end_date", "alert_days", "alert_email"]
     updates = {k: v for k, v in body.items() if k in allowed_fields}

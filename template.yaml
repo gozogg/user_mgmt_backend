@@ -33,6 +33,33 @@ Parameters:
   SubnetId2:
     Type: String
     Description: Second private subnet ID (RDS/Lambda VPC config needs at least 2 for availability)
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Default: "67f2dac032db6036efe244ab0dd5a7ad7d87b501b5f5ab20fa915087ed590b63"
+    Description: HMAC secret used to sign login JWTs. Override this in production.
+  DemoUsername:
+    Type: String
+    Default: "demo"
+  DemoPasswordHash:
+    Type: String
+    NoEcho: true
+    Default: "89ca2d399f665cd1b21e29dc346496c0:06bdea0f53c03e9c599b626c44af95b3a5e33801bb5bfea449aa48c807580c18"
+    Description: PBKDF2 hash from `python scripts/hash_password.py`. Default password is DemoJobs1!
+  DemoOrgId:
+    Type: String
+    Default: "1"
+  ClientUsername:
+    Type: String
+    Default: "client"
+  ClientPasswordHash:
+    Type: String
+    NoEcho: true
+    Default: "7b3ce0cc0f13b85c97e817f5310bb10c:4ae213c8df01d9d15e821990e3042235a9ffe62d95a934014af43e43c4df53cb"
+    Description: PBKDF2 hash from `python scripts/hash_password.py`. Default password is ClientJobs1!
+  ClientOrgId:
+    Type: String
+    Default: "1"
 
 # ============================================
 # Globals: shared settings applied to every
@@ -40,10 +67,16 @@ Parameters:
 # ============================================
 Globals:
   Api:
-    Cors:
-      AllowOrigin: "'*'"
-      AllowHeaders: "'Content-Type'"
-      AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+    Auth:
+      DefaultAuthorizer: JwtAuthorizer
+      AddDefaultAuthorizerToCorsPreflight: false
+      Authorizers:
+        JwtAuthorizer:
+          FunctionArn: !GetAtt AuthorizerFunction.Arn
+          FunctionPayloadType: TOKEN
+          Identity:
+            Header: Authorization
+            ReauthorizeEvery: 300
   Function:
     Runtime: python3.13
     Timeout: 10
@@ -56,24 +89,102 @@ Globals:
         DB_USER: !Ref DBUser
         DB_PASSWORD: !Ref DBPassword
         MAPBOX_TOKEN: !Ref MapBoxToken
-    VpcConfig:
-      SecurityGroupIds:
-        - !Ref VpcSecurityGroupId
-      SubnetIds:
-        - !Ref SubnetId1
-        - !Ref SubnetId2
 
 Resources:
+
+  JobsApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      Auth:
+        DefaultAuthorizer: JwtAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          JwtAuthorizer:
+            FunctionArn: !GetAtt AuthorizerFunction.Arn
+            FunctionPayloadType: TOKEN
+            Identity:
+              Header: Authorization
+              ReauthorizeEvery: 300
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        UNAUTHORIZED:
+          StatusCode: 401
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+          ResponseTemplates:
+            application/json: '{"error":"unauthorized"}'
+
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: auth.authorizer.lambda_handler
+      Timeout: 5
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JwtSecret
+
+  LoginFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: auth.login.lambda_handler
+      MemorySize: 256
+      Timeout: 15
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JwtSecret
+          DEMO_USERNAME: !Ref DemoUsername
+          DEMO_PASSWORD_HASH: !Ref DemoPasswordHash
+          DEMO_ORG_ID: !Ref DemoOrgId
+          CLIENT_USERNAME: !Ref ClientUsername
+          CLIENT_PASSWORD_HASH: !Ref ClientPasswordHash
+          CLIENT_ORG_ID: !Ref ClientOrgId
+      Events:
+        Login:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JobsApi
+            Path: /login
+            Method: post
+            Auth:
+              Authorizer: NONE
 
   GetClientsFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
       Handler: clients.get_client.lambda_handler
+      VpcConfig: &vpcConfig
+        SecurityGroupIds:
+          - !Ref VpcSecurityGroupId
+        SubnetIds:
+          - !Ref SubnetId1
+          - !Ref SubnetId2
       Events:
         GetClients:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /clients
             Method: get
 
@@ -82,10 +193,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: clients.add_client.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         CreateClient:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /clients
             Method: post
 
@@ -94,10 +207,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: clients.update_client.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         UpdateClient:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /clients/{id}
             Method: put
 
@@ -106,10 +221,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: clients.delete_client.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         DeleteClients:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /clients/{id}
             Method: delete
 
@@ -118,10 +235,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: jobs.get_job.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         GetJobs:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /jobs
             Method: get
 
@@ -130,10 +249,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: jobs_dates.get_job_dates.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         GetJobDates:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /job-dates
             Method: get
 
@@ -142,10 +263,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: jobs.add_job.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         CreateJobs:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /jobs
             Method: post
 
@@ -154,10 +277,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: jobs.update_job.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         UpdateJobs:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /jobs/{id}
             Method: put
 
@@ -166,10 +291,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: jobs.delete_job.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         DeleteJobs:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /jobs/{id}
             Method: delete
 
@@ -179,10 +306,12 @@ Resources:
       CodeUri: ./
       Handler: jobs.sync_jobs.lambda_handler
       Timeout: 30
+      VpcConfig: *vpcConfig
       Events:
         SyncJobs:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /jobs/sync
             Method: post
         DailySync:
@@ -196,22 +325,26 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: jobs_dates.delete_job_dates.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         GetJobDates:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /job-dates/{id}/{date}
             Method: delete
-  
+
   UpdateJobDatesFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./
       Handler: jobs_dates.update_job_dates.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         GetJobDates:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /job-dates/{id}/{date}
             Method: put
 
@@ -220,10 +353,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: schedule.get_unassigned.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         GetScheduleUnassigned:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /schedule/unassigned
             Method: get
 
@@ -233,10 +368,12 @@ Resources:
       CodeUri: ./
       Handler: schedule.preview_schedule.lambda_handler
       Timeout: 30
+      VpcConfig: *vpcConfig
       Events:
         PreviewSchedule:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /schedule/preview
             Method: post
 
@@ -246,10 +383,12 @@ Resources:
       CodeUri: ./
       Handler: schedule.apply_schedule.lambda_handler
       Timeout: 30
+      VpcConfig: *vpcConfig
       Events:
         ApplySchedule:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /schedule/apply
             Method: post
 
@@ -258,10 +397,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: organizations.get_organization.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         GetOrganization:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /organizations/{id}
             Method: get
 
@@ -270,10 +411,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: organizations.add_organization.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         CreateOrganization:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /organizations
             Method: post
 
@@ -282,10 +425,12 @@ Resources:
     Properties:
       CodeUri: ./
       Handler: organizations.update_organization.lambda_handler
+      VpcConfig: *vpcConfig
       Events:
         UpdateOrganization:
           Type: Api
           Properties:
+            RestApiId: !Ref JobsApi
             Path: /organizations/{id}
             Method: put
 
@@ -296,4 +441,4 @@ Resources:
 Outputs:
   ApiUrl:
     Description: Base URL for the deployed API
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+    Value: !Sub "https://${JobsApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
