@@ -26,7 +26,7 @@ def lambda_handler(event, context):
     if err:
         return err
 
-    allowed_fields = ["client_id", "frequency", "description", "day_of_week", "price", "start_date", "end_date"]
+    allowed_fields = ["client_id", "frequency", "description", "day_of_week", "price", "start_date", "end_date", "status"]
     updates = {k: v for k, v in body.items() if k in allowed_fields}
 
     if not updates:

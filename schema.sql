@@ -6,7 +6,9 @@ CREATE TABLE organizations (
     id SERIAL PRIMARY KEY,
     business_name VARCHAR(50) NOT NULL,
     default_start_date DATE,
-    default_end_date DATE
+    default_end_date DATE,
+    alert_days INTEGER DEFAULT 14,
+    alert_email VARCHAR(50)
 );
 
 CREATE TABLE clients (
@@ -29,6 +31,8 @@ CREATE TABLE jobs (
     organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     frequency VARCHAR(50) NOT NULL
         CHECK (frequency IN ('weekly', 'biweekly', 'onetime')),
+    status VARCHAR(50) DEFAULT 'active'
+        CHECK (status IN ('active', 'completed', 'future', 'cancelled')),
     description TEXT NOT NULL,
     day_of_week VARCHAR(50),
     price DECIMAL,
