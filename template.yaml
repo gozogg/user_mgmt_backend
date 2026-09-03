@@ -59,7 +59,7 @@ Parameters:
     Description: PBKDF2 hash from `python scripts/hash_password.py`. Default password is ClientJobs1!
   ClientOrgId:
     Type: String
-    Default: "1"
+    Default: "2"
 
 # ============================================
 # Globals: shared settings applied to every
