@@ -7,6 +7,6 @@ architecture = "x86_64"
 handler = "clients.get_client.lambda_handler"
 manifest_hash = ""
 packagetype = "Zip"
-functions = ["AuthorizerFunction", "LoginFunction", "GetClientsFunction", "CreateClientsFunction", "UpdateClientsFunction", "DeleteClientsFunction", "GetJobsFunction", "GetJobDatesFunction", "CreateJobsFunction", "UpdateJobsFunction", "DeleteJobsFunction", "SyncJobsFunction", "DeleteJobDatesFunction", "UpdateJobDatesFunction", "GetScheduleUnassignedFunction", "PreviewScheduleFunction", "ApplyScheduleFunction", "GetOrganizationFunction", "CreateOrganizationFunction", "UpdateOrganizationFunction"]
+functions = ["AuthorizerFunction", "LoginFunction", "GetClientsFunction", "CreateClientsFunction", "UpdateClientsFunction", "DeleteClientsFunction", "GetJobsFunction", "GetJobDatesFunction", "CreateJobsFunction", "UpdateJobsFunction", "DeleteJobsFunction", "SyncJobsFunction", "AlertOverdueFunction", "DeleteJobDatesFunction", "UpdateJobDatesFunction", "GetScheduleUnassignedFunction", "PreviewScheduleFunction", "ApplyScheduleFunction", "GetOrganizationFunction", "CreateOrganizationFunction", "UpdateOrganizationFunction"]
 
 [layer_build_definitions]

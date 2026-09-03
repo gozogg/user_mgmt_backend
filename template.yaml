@@ -319,6 +319,25 @@ Resources:
           Properties:
             Schedule: cron(0 9 * * ? *)
             Enabled: true
+  
+  AlertOverdueFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: alerts.alert_overdue.lambda_handler
+      VpcConfig: *vpcConfig
+      Events:
+        AlertOverdue:
+          Type: Api
+          Properties:
+            RestApiId: !Ref JobsApi
+            Path: /alerts/alert-overdue
+            Method: post
+        DailyAlertOverdue:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 9 * * ? *)
+            Enabled: true
 
   DeleteJobDatesFunction:
     Type: AWS::Serverless::Function
