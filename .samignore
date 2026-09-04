@@ -5,3 +5,7 @@ deploy/
 .env
 __pycache__/
 .aws-sam/
+.github/
+tests/
+requirements-dev.txt
+pytest.ini

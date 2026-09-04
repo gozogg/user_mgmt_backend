@@ -6,14 +6,11 @@ React frontend talks to this SAM/Lambda API. After deploy, copy the `ApiUrl` out
 
 Every route except `POST /login` requires `Authorization: Bearer <jwt>`. The JWT carries `org_id` and `role`. Lambdas use that org id and ignore any `organization_id` sent by the browser.
 
-Default users (change these before sharing a live client account):
 
-| Username | Password | Role | Org id (SAM param) |
-|---|---|---|---|
-| `demo` | `DemoJobs1!` | demo | `DemoOrgId` (default `1`) |
-| `client` | `ClientJobs1!` | client | `ClientOrgId` (default `1`) |
+| Username | Password |
+|---|---|
+| `demo` | `DemoJobs1!` |
 
-Both default to organization `1` so the app works with your current data. For a recruiter-safe demo, create a second organization, seed fake clients/jobs, and deploy with `DemoOrgId` set to that id.
 
 Change a password:
 
@@ -22,6 +19,17 @@ python scripts/hash_password.py 'your-new-password'
 ```
 
 Then pass `DemoPasswordHash` or `ClientPasswordHash` (and `JwtSecret`) in `sam deploy --parameter-overrides`.
+
+## Tests
+
+Unit tests cover the scheduler, recurring dates, passwords/JWTs, and org scoping from the authorizer. They do not need RDS.
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+```
+
+GitHub Actions runs the same command on every push and pull request (`.github/workflows/test.yml`).
 
 ## Deploy
 
