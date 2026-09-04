@@ -11,7 +11,7 @@ Default users (change these before sharing a live client account):
 | Username | Password | Role | Org id (SAM param) |
 |---|---|---|---|
 | `demo` | `DemoJobs1!` | demo | `DemoOrgId` (default `1`) |
-| `client` | `ClientJobs1!` | client | `ClientOrgId` (default `1`) |
+| `client` | `ClientJobs1!` | client | `ClientOrgId` (default `2`) |
 
 Both default to organization `1` so the app works with your current data. For a recruiter-safe demo, create a second organization, seed fake clients/jobs, and deploy with `DemoOrgId` set to that id.
 
