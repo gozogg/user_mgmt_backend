@@ -4,10 +4,18 @@ import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from db import execute_returning, fetch_all
+from db import execute_returning
 from org import require_organization
 from response import json_response
-from clients.generateLatLng import generateLatLng
+
+
+def _optional_coord(value):
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def lambda_handler(event, context):
@@ -32,28 +40,21 @@ def lambda_handler(event, context):
             "phone_number",
             "email",
             "city",
+            "latitude",
+            "longitude",
+            "postal_code",
         ]
         updates = {k: v for k, v in body.items() if k in allowed_fields}
 
         if not updates:
             return json_response(400, {"error": "no valid fields to update"})
 
-        if "address" in updates or "city" in updates:
-            existing_rows = fetch_all(
-                "SELECT address, city FROM clients WHERE id = %s AND organization_id = %s",
-                (client_id, org_id),
-            )
-            if not existing_rows:
-                return json_response(404, {"error": "client not found"})
-
-            existing = existing_rows[0]
-            address = updates.get("address", existing.get("address"))
-            city = updates.get("city", existing.get("city"))
-            coords = generateLatLng({"address": address, "city": city}) or {}
-
-            updates["latitude"] = coords.get("latitude")
-            updates["longitude"] = coords.get("longitude")
-            updates["postal_code"] = coords.get("postal_code")
+        if "latitude" in updates:
+            updates["latitude"] = _optional_coord(updates.get("latitude"))
+        if "longitude" in updates:
+            updates["longitude"] = _optional_coord(updates.get("longitude"))
+        if "postal_code" in updates and not updates.get("postal_code"):
+            updates["postal_code"] = None
 
         set_clause = ", ".join(f"{field} = %s" for field in updates.keys())
         values = list(updates.values()) + [client_id, org_id]

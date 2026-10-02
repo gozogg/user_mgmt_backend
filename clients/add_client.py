@@ -7,7 +7,15 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from db import fetch_all, execute_returning
 from org import require_organization
 from response import json_response
-from clients.generateLatLng import generateLatLng
+
+
+def _optional_coord(value):
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def lambda_handler(event, context):
@@ -46,11 +54,9 @@ def lambda_handler(event, context):
         if existing_clients:
             return json_response(400, {"error": "client with same first and last name exists"})
 
-        coords = generateLatLng({"address": address, "city": city}) or {}
-
-        latitude = coords.get("latitude")
-        longitude = coords.get("longitude")
-        postal_code = coords.get("postal_code")
+        latitude = _optional_coord(body.get("latitude"))
+        longitude = _optional_coord(body.get("longitude"))
+        postal_code = body.get("postal_code") or None
 
         new_row = execute_returning(
             """
